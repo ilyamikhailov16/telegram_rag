@@ -8,7 +8,7 @@ df = pd.read_csv("./data/buildings.csv", encoding="windows-1251")
 
 # Ensure date-like columns are parsed to proper datetimes so SQL functions work
 for col in ["create_date", "zpo_n", "zpo_k", "ird_n", "ird_k", "pir_st", "pir_fn", "smr_st", "smr_fn", "plan_vvod"]:
-    df[col] = pd.to_datetime(df[col], errors="coerce")
+    df[col] = pd.to_datetime(df[col], errors="coerce", dayfirst=True)
 
 # Numeric columns
 numeric_cols = ["latit_oks", "longit_oks"]
