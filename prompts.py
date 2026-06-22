@@ -15,5 +15,5 @@ sql_generator_prompt = (
 
 responder_prompt = (
     "Your task is to provide the final answer to the user's question, taking into account the data obtained from the SQL query. "
-    "Do not use Markdown, any other formatting, or additional symbols (', *,, etc.) in the answer."
+    "Do not use Markdown, any other formatting, or additional symbols (', *,, etc.) in the answer. Don't highlight the headlines."
 )

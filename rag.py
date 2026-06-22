@@ -7,11 +7,12 @@ from sqlalchemy import CursorResult, create_engine, text
 
 from config import config
 from prompts import sql_generator_prompt, responder_prompt
+from exceptions import InvalidSQLQueryError
 
 
 class LLMClient(ABC):
     @abstractmethod
-    def get_answer(self, user_prompt: str, *args, **kwargs) -> Any:
+    def get_answer(self, system_prompt: str, user_prompt: str, *args, **kwargs) -> Any:
         """Return an answer for the given user prompt.
 
         Subclasses must implement this method to call a language model
@@ -21,8 +22,8 @@ class LLMClient(ABC):
         """
         raise NotImplementedError
 
-    def __call__(self, user_prompt: str, *args, **kwargs) -> Any:
-        return self.get_answer(user_prompt, *args, **kwargs)
+    def __call__(self, system_prompt: str, user_prompt: str, *args, **kwargs) -> Any:
+        return self.get_answer(system_prompt, user_prompt, *args, **kwargs)
 
 
 class OpenRouterClient(LLMClient):
@@ -31,7 +32,6 @@ class OpenRouterClient(LLMClient):
         base_url: str,
         api_key: str,
         model_path: str,
-        system_prompt: str,
         max_retries: int,
     ) -> None:
         """Initialize an OpenAI-compatible client wrapper.
@@ -49,28 +49,29 @@ class OpenRouterClient(LLMClient):
             api_key=api_key,
         )
         self.model_path = model_path
-        self.system_prompt = system_prompt
         self.max_retries = max_retries
 
-    def get_answer(self, user_prompt: str) -> str:
+    def get_answer(self, system_prompt: str, user_prompt: str) -> str:
         """Send the prompt to the wrapped client and return the response text."""
         retries_num = self.max_retries
         while retries_num > 0:
             try:
+                # Limit tokens to avoid exceeding account credit/token budget
                 response = (
                     self.client.chat.completions.create(
                         model=self.model_path,
                         messages=[
                             {
                                 "role": "system",
-                                "content": self.system_prompt,
+                                "content": system_prompt,
                             },
                             {
                                 "role": "user",
                                 "content": user_prompt,
                             },
                         ],
-                        temperature=0,
+                        temperature=config.temperature,
+                        max_tokens=config.max_tokens,
                     )
                     .choices[0]
                     .message.content
@@ -80,7 +81,7 @@ class OpenRouterClient(LLMClient):
                     raise ValueError("Received empty response from OpenRouterClient.")
                 return response
 
-            except (BadRequestError, APIError, RateLimitError) as e:
+            except (BadRequestError, APIError, RateLimitError):
                 raise
 
             except Exception as e:
@@ -115,15 +116,17 @@ class SQLExecutor:
 class RAGService:
     def __init__(
         self,
-        sql_generator: LLMClient,
-        responder: LLMClient,
+        llm_client: LLMClient,
         sql_executor: SQLExecutor,
         max_retries: int,
+        sql_generator_prompt: str,
+        responder_prompt: str,
     ) -> None:
-        self.sql_generator = sql_generator
-        self.responder = responder
+        self.llm_client = llm_client
         self.sql_executor = sql_executor
         self.max_retries = max_retries
+        self.sql_generator_prompt = sql_generator_prompt
+        self.responder_prompt = responder_prompt
 
     def get_answer(self, question: str) -> str:
         """Generate SQL from `question`, execute it, and produce a response.
@@ -141,19 +144,24 @@ class RAGService:
         retries_num = self.max_retries
         while retries_num > 0:
             try:
-                sql_query = self.sql_generator(question)
+                sql_query = self.llm_client(self.sql_generator_prompt, question)
+                if not sql_query.strip().lower().startswith("select"):
+                    raise InvalidSQLQueryError("Only 'SELECT' queries are allowed.")
+
                 query_result = self.sql_executor.execute_query(sql_query)
                 result_str = "\n".join([str(row) for row in query_result])
 
-                answer = self.responder(
-                    f"Question: {question}\nSQL Query: {sql_query}\nResult: {result_str}"
+                answer = self.llm_client(
+                    self.responder_prompt,
+                    f"Question: {question}\nSQL Query: {sql_query}\nResult: {result_str}",
                 )
                 return answer
 
-            except (BadRequestError, APIError, RateLimitError) as e:
-                raise RuntimeError(
-                    "Failed to get answer from RAGService due to API error."
-                ) from e
+            except (BadRequestError, APIError, RateLimitError):
+                raise
+
+            except InvalidSQLQueryError:
+                raise
 
             except Exception as e:
                 logging.exception(
@@ -172,20 +180,14 @@ class RAGService:
 
 
 rag_service = RAGService(
-    sql_generator=OpenRouterClient(
+    llm_client=OpenRouterClient(
         base_url=config.base_url,
         api_key=config.api_token,
         model_path=config.model_path,
-        system_prompt=sql_generator_prompt,
-        max_retries=config.client_max_retries,
-    ),
-    responder=OpenRouterClient(
-        base_url=config.base_url,
-        api_key=config.api_token,
-        model_path=config.model_path,
-        system_prompt=responder_prompt,
         max_retries=config.client_max_retries,
     ),
     sql_executor=SQLExecutor(db_url=config.db_url),
     max_retries=config.rag_max_retries,
+    sql_generator_prompt=sql_generator_prompt,
+    responder_prompt=responder_prompt,
 )

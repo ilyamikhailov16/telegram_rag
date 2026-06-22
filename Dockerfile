@@ -13,6 +13,7 @@ COPY ./.env /app/.env
 COPY ./bot.py /app/bot.py
 COPY ./config.py /app/config.py
 COPY ./database.py /app/database.py
+COPY ./exceptions.py /app/exceptions.py
 COPY ./main.py /app/main.py
 COPY ./prompts.py /app/prompts.py
 COPY ./rag.py /app/rag.py

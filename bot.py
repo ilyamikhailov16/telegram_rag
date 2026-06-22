@@ -9,6 +9,7 @@ from aiogram.types import Message
 
 from config import config
 from rag import rag_service
+from exceptions import InvalidSQLQueryError
 
 dp = Dispatcher()
 
@@ -31,13 +32,22 @@ async def message_handler(message: Message) -> None:
         answer_text = rag_service(message.text)
         await message.answer(answer_text)
         logging.info(f"Answer with text '{answer_text}' was sent successfully")
+
+    except InvalidSQLQueryError as e:
+        logging.exception(f"Not allowed user request: {message.text} and error {e}")
+
+        try:
+            await message.answer("Bad request! 'SELECT' is only allowed.")
+        except Exception as e:
+            logging.exception(f"Failed to send bad-request message: {e}")
+
     except Exception as e:
         logging.exception(f"Error occurred while handling message: {e}")
 
         try:
             await message.answer("Server error!")
         except Exception as e:
-            logging.exception(f"Failed to send error message: {e}")
+            logging.exception(f"Failed to send server error message: {e}")
 
 
 async def run_bot() -> None:

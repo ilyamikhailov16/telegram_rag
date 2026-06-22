@@ -20,6 +20,8 @@ class Config(BaseSettings):
     client_max_retries: int
     rag_max_retries: int
     model_path: str
+    temperature: float
+    max_tokens: int
 
     # build DB URL from other fields at runtime
     @property
