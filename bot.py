@@ -19,7 +19,14 @@ async def command_start_handler(message: Message) -> None:
     """
     This handler receives messages with `/start` command
     """
-    await message.answer(f"Привет, {html.bold(message.from_user.full_name)}!")
+    welcome = (
+        f"Привет, {html.bold(message.from_user.full_name)}!\n"
+        "Я — бот для получения информации о зданиях.\n"
+        "Скажи, какую информацию ты хочешь узнать.\n"
+        "Учти: по твоему запросу будет выполнен SQL‑запрос к базе данных,"
+        " поэтому формулируй его аккуратно."
+    )
+    await message.answer(welcome)
 
 
 @dp.message()
