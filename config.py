@@ -17,7 +17,8 @@ class Config(BaseSettings):
     log_format: str
     api_token: str
     base_url: str
-    max_retries: int
+    client_max_retries: int
+    rag_max_retries: int
     model_path: str
 
     # build DB URL from other fields at runtime

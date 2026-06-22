@@ -9,6 +9,7 @@ sql_generator_prompt = (
     "'smr_st' (SMR start date), 'smr_fn' (SMR finish date), 'plan_vvod' (planned entry time), 'rol_org' (role of organization), 'zak_inn' (contractor INN), 'zak_kpp' (contractor KPP), 'resp_mail' (responsible person's email from organization). "
     "Table name is 'buildings'. "
     "You must output only the SQL query itself with a ; at the end and no extra words or symbols. No explanation. No Markdown. "
+    "Keep in mind that I work with postgres. "
     "Example of the question: 'What is the full name of the object with guid_oks equal to 123?' Example of the answer: 'SELECT full_name FROM buildings WHERE guid_oks = 123;'."
 )
 

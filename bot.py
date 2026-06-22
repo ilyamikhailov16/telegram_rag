@@ -23,7 +23,7 @@ async def command_start_handler(message: Message) -> None:
 
 @dp.message()
 async def message_handler(message: Message) -> None:
-    """ """
+    """Send user request to RAG service and return the answer. In case of any error, send "Server error!" message to the user."""
     try:
         logging.info(
             f"Message '{message.text}' with id {message.message_id} was received successfully"
@@ -35,7 +35,7 @@ async def message_handler(message: Message) -> None:
         logging.exception(f"Error occurred while handling message: {e}")
 
         try:
-            await message.answer("Bad request!")
+            await message.answer("Server error!")
         except Exception as e:
             logging.exception(f"Failed to send error message: {e}")
 
