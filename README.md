@@ -5,7 +5,7 @@
 ## Быстрый старт
 
 - Убедитесь, что у вас установлены Docker и Docker Compose.
-- Запустите сервисы (Postgres и бот) через `docker-compose up -d`.
+- Запустите сервисы (Postgres и бот) через `docker-compose up` или  `docker-compose up --build`.
 
 ## Команды для доступа к Postgres
 
