@@ -13,7 +13,8 @@ for col in ["create_date", "zpo_n", "zpo_k", "ird_n", "ird_k", "pir_st", "pir_fn
 # Numeric columns
 numeric_cols = ["latit_oks", "longit_oks"]
 for col in numeric_cols:
-    df[col] = pd.to_numeric(df[col], errors="coerce")
+    # Replace comma decimals with dot so numeric conversion works (e.g. '55,755' -> '55.755')
+    df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', '.', regex=False), errors="coerce")
 
 # Write to SQL (replace existing table)
 df.to_sql("buildings", engine, if_exists="replace", index=False)
